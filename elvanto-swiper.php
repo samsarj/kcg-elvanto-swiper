@@ -2,7 +2,7 @@
 /*
 Plugin Name: Elvanto Swiper
 Description: A plugin to fetch and display events from the Elvanto API with specific CSS and JS.
-Version: 2.0
+Version: 1.0.0
 Author: Sam Sarjudeen
 */
 
