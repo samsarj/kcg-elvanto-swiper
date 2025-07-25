@@ -150,29 +150,29 @@ class Elvanto_Swiper_Display
 
     ?>
         <div class="kcg-card event-card" <?php if (!empty($event['color'])): ?> style="border-color: <?php echo esc_attr($event['color']); ?>; background-color: hsl(from <?php echo esc_attr($event['color']); ?> h s 98);" <?php endif; ?>>
-            <?php if (!empty($event['picture'])): ?>
-                <div class="event-image">
-                    <img src="<?php echo esc_url($event['picture']); ?>" alt="<?php echo esc_attr($event['title'] ?? 'Event'); ?>">
-                </div>
-            <?php endif; ?>
-
-            <div class="event-content">
+            <div class="event-header">
+                <?php if (!empty($event['picture'])): ?>
+                    <div class="event-image">
+                        <img src="<?php echo esc_url($event['picture']); ?>" alt="<?php echo esc_attr($event['title'] ?? 'Event'); ?>">
+                    </div>
+                <?php endif; ?>
                 <div class="event-title">
-                    <h4><?php echo esc_html($event['title'] ?? 'Event'); ?></h4>
+                    <h5><?php echo esc_html($event['title'] ?? 'Event'); ?></h5>
                     <?php if (!empty($event['subtitle'])): ?>
-                        <h5><?php echo esc_html($event['subtitle']); ?></h5>
+                        <h6><?php echo esc_html($event['subtitle']); ?></h6>
                     <?php endif; ?>
                 </div>
+            </div>
+
+            <div class="event-content">
 
                 <div class="event-details">
                     <?php if ($atts['show_date'] && !empty($formatted_date)): ?>
-                        <div class="event-date">
+                        <div class="event-date-time">
                             📅 <?php echo esc_html($formatted_date); ?>
-                        </div>
-                    <?php endif; ?>
-                    <?php if ($atts['show_time'] && !empty($formatted_time)): ?>
-                        <div class="event-time">
-                            ⏰ <?php echo esc_html($formatted_time); ?>
+                        <?php endif; ?>
+                        <?php if ($atts['show_time'] && !empty($formatted_time)): ?>
+                            | ⏰ <?php echo esc_html($formatted_time); ?>
                         </div>
                     <?php endif; ?>
 
@@ -199,8 +199,8 @@ class Elvanto_Swiper_Display
 
                 // Show More Info button
                 if ($has_more_info): ?>
-                    <div class="wp-block-button has-custom-width wp-block-button__width-100 is-style-outline is-style-outline--3">
-                        <a href="<?php echo esc_url($event['link_info']); ?>" <?php if (!empty($event['color'])): ?> style="border-color: <?php echo esc_attr($event['color']); ?>; color: <?php echo esc_attr($event['color']); ?>" <?php endif; ?> class="wp-block-button__link wp-element-button" target="_blank">
+                    <div class="wp-block-button has-custom-width wp-block-button__width-100">
+                        <a href="<?php echo esc_url($event['link_info']); ?>" <?php if (!empty($event['color'])): ?> style="border-color: <?php echo esc_attr($event['color']); ?>; color: <?php echo esc_attr($event['color']); ?>; background: transparent;" <?php endif; ?> class="wp-block-button__link wp-element-button" target="_blank">
                             More Info
                         </a>
                     </div>
@@ -209,8 +209,8 @@ class Elvanto_Swiper_Display
                 <?php
                 // Show Register button
                 if ($has_register): ?>
-                    <div class="wp-block-button has-custom-width wp-block-button__width-100 is-style-outline">
-                        <a href="<?php echo esc_url($event['link_register']); ?>" class="wp-block-button__link wp-element-button" target="_blank">
+                    <div class="wp-block-button has-custom-width wp-block-button__width-100">
+                        <a href="<?php echo esc_url($event['link_register']); ?>" <?php if (!empty($event['color'])): ?> style="border-color: <?php echo esc_attr($event['color']); ?>; color: var(--wp--preset--color--base); background: <?php echo esc_attr($event['color']); ?>;" <?php endif; ?> class="wp-block-button__link wp-element-button" target="_blank">
                             Register
                         </a>
                     </div>
