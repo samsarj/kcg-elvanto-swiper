@@ -1,0 +1,12 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Test Plugin Syntax",
+			"type": "shell",
+			"command": "php -l \"c:\\Users\\Sam Sarjudeen\\Local Sites\\kcg2\\app\\public\\wp-content\\plugins\\kcg-elvanto-swiper\\elvanto-swiper.php\"",
+			"group": "test",
+			"isBackground": false
+		}
+	]
+}
