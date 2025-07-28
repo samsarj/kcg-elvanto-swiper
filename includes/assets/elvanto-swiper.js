@@ -14,5 +14,8 @@ document.addEventListener("DOMContentLoaded", function () {
     cardsEffect: {
       perSlideOffset: 80,
     },
+    navigation: {
+      enabled: false,
+    }
   });
 });
