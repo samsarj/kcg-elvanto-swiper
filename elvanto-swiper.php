@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Elvanto Swiper
  * Description: A plugin to display events from Elvanto using a Swiper carousel.
- * Version: 2.1.3
+ * Version: 2.2.0
  * Author: Sam Sarjudeen
  * Author URI: https://github.com/samsarj
  * Plugin URI: https://github.com/samsarj/kcg-elvanto-swiper

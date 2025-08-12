@@ -4,7 +4,6 @@
 
 /* Make swiper slides equal height */
 .swiper-wrapper {
-    align-items: stretch;
     padding: 1rem;
     padding-right: 0;
     margin-left: -1rem;
@@ -15,7 +14,7 @@
     align-items: center;
     justify-content: center;
     width: 20rem;
-    height: auto;
+    min-height: 20rem;
     overflow: visible;
     box-shadow: 0 0 1rem rgba(0, 0, 0, 0.2);
 }
@@ -24,8 +23,8 @@
     box-shadow: none;
     text-align: center;
     flex-direction: column;
-    height: 100%;
     width: 100%;
+    min-height: 20rem;
     justify-content: space-between;
     gap: 0.5rem;
 }
