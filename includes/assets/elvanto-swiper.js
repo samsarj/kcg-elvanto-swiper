@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", function () {
   var swiper = new Swiper(".swiper-container", {
     slidesPerView: "auto",
-    effect: "cards",
+    spaceBetween: 20,
     grabCursor: true,
     mousewheel: {
       enabled: true,
@@ -11,11 +11,9 @@ document.addEventListener("DOMContentLoaded", function () {
       enabled: true,
       onlyInViewport: true,
     },
-    cardsEffect: {
-      perSlideOffset: 80,
-    },
-    navigation: {
-      enabled: false,
-    }
+    // Use slide effect instead of cards for better button interaction
+    effect: "slide",
+    // Center the active slide
+    centeredSlides: true,
   });
 });

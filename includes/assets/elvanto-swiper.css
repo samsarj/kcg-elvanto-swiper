@@ -16,7 +16,6 @@
     width: 20rem;
     min-height: 20rem;
     overflow: visible;
-    box-shadow: 0 0 1rem rgba(0, 0, 0, 0.2);
 }
 
 .event-card {

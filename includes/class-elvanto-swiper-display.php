@@ -31,7 +31,7 @@ class Elvanto_Swiper_Display
         // Enqueue Swiper CSS
         wp_enqueue_style(
             'swiper-css',
-            'https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css'
+            'https://cdn.jsdelivr.net/npm/swiper@12/swiper-bundle.min.css'
         );
 
         // Enqueue our custom CSS
@@ -45,7 +45,7 @@ class Elvanto_Swiper_Display
         // Enqueue Swiper JS
         wp_enqueue_script(
             'swiper-js',
-            'https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js',
+            'https://cdn.jsdelivr.net/npm/swiper@12/swiper-bundle.min.js',
             array(),
             null,
             true
@@ -98,13 +98,6 @@ class Elvanto_Swiper_Display
                     </div>
                 <?php endforeach; ?>
             </div>
-
-            <!-- Navigation arrows -->
-            <div class="swiper-button-next"></div>
-            <div class="swiper-button-prev"></div>
-
-            <!-- Pagination -->
-            <div class="swiper-pagination"></div>
         </div>
     <?php
 
@@ -137,14 +130,14 @@ class Elvanto_Swiper_Display
                     $datetime = new DateTime($datetime_string, new DateTimeZone('UTC'));
                     $wp_timezone = wp_timezone();
                     $datetime->setTimezone($wp_timezone);
-                    $formatted_time = $datetime->format('g:ia');
+                    $formatted_time = $datetime->format('g:i A');
                 } catch (Exception $e) {
                     // Fallback to original method if DateTime fails
-                    $formatted_time = wp_date('g:ia', strtotime($event['time']));
+                    $formatted_time = wp_date('g:i A', strtotime($event['time']));
                 }
             } else {
                 // Fallback if we only have time
-                $formatted_time = wp_date('g:ia', strtotime($event['time']));
+                $formatted_time = wp_date('g:i A', strtotime($event['time']));
             }
         }
 
