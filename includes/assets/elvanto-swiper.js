@@ -16,4 +16,29 @@ document.addEventListener("DOMContentLoaded", function () {
     // Center the active slide
     centeredSlides: true,
   });
+
+  // Equalize card heights
+  function equalizeCardHeights() {
+    const cards = document.querySelectorAll(".event-card");
+    let maxHeight = 0;
+
+    // Reset heights first to get natural heights
+    cards.forEach(card => {
+      card.style.height = "auto";
+    });
+
+    // Find the tallest card
+    cards.forEach(card => {
+      maxHeight = Math.max(maxHeight, card.offsetHeight);
+    });
+
+    // Set all cards to the max height
+    cards.forEach(card => {
+      card.style.height = maxHeight + "px";
+    });
+  }
+
+  // Run on load and on window resize
+  equalizeCardHeights();
+  window.addEventListener("resize", equalizeCardHeights);
 });

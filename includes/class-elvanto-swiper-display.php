@@ -150,9 +150,9 @@ class Elvanto_Swiper_Display
                     </div>
                 <?php endif; ?>
                 <div class="event-title">
-                    <h5><?php echo esc_html($event['title'] ?? 'Event'); ?></h5>
+                    <h4><?php echo esc_html($event['title'] ?? 'Event'); ?></h4>
                     <?php if (!empty($event['subtitle'])): ?>
-                        <h6><?php echo esc_html($event['subtitle']); ?></h6>
+                        <h5><?php echo esc_html($event['subtitle']); ?></h5>
                     <?php endif; ?>
                 </div>
             </div>
