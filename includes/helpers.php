@@ -69,9 +69,17 @@ function elvanto_swiper_get_event_image($event) {
 
 /**
  * Parse service links configuration and return as array
+ * Note: This uses the new API provider option name for consistency
  */
 function elvanto_swiper_parse_service_links() {
-    $service_links_option = get_option('elvanto_swiper_service_links', '');
+    // Try to use the new option name first, fall back to old one for migration
+    $service_links_option = get_option('kcg_elvanto_api_service_links', '');
+    
+    if (empty($service_links_option)) {
+        // Fall back to old option name for backward compatibility
+        $service_links_option = get_option('elvanto_swiper_service_links', '');
+    }
+    
     $service_links = [];
     
     if (!empty($service_links_option)) {

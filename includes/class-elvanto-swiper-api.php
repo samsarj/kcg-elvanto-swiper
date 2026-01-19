@@ -18,7 +18,13 @@ class Elvanto_Swiper_API {
     public function fetch_events() {
         error_log('Starting dual-endpoint fetch process');
         
-        $api_key = get_option('elvanto_swiper_api_key');
+        // Get API key from the provider
+        if (!class_exists('KCG_Elvanto_API_Registry')) {
+            error_log('KCG_Elvanto_API_Registry not available');
+            return;
+        }
+        
+        $api_key = KCG_Elvanto_API_Registry::get_api_key();
         if (!$api_key) {
             error_log('No API key configured');
             return;

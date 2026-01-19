@@ -74,8 +74,16 @@ class Elvanto_Swiper_Display
             'show_description' => true
         ), $atts);
 
-        // Get events from API class
+        // Get events from API provider
+        if (!class_exists('Elvanto_Swiper_API')) {
+            return '<p>' . esc_html__('API provider not available', 'elvanto-swiper') . '</p>';
+        }
+        
         $api = new Elvanto_Swiper_API();
+        if (!$api) {
+            return '<p>' . esc_html__('Events service not initialized', 'elvanto-swiper') . '</p>';
+        }
+        
         $events = $api->get_events();
 
         if (empty($events)) {
