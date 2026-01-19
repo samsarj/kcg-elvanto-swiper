@@ -19,20 +19,19 @@ class Elvanto_Swiper_Admin {
         add_action('admin_menu', array($this, 'add_admin_page'));
         add_action('admin_init', array($this, 'register_settings'));
         add_action('admin_init', array($this, 'check_for_manual_actions'));
-        add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_styles'));
+        add_action('admin_init', array($this, 'handle_refresh'));
     }
 
     /**
      * Add admin menu page
      */
     public function add_admin_page() {
-        add_menu_page(
+        add_options_page(
             'Elvanto Swiper Settings', 
             'Elvanto Swiper', 
             'manage_options', 
             'elvanto-swiper', 
-            array($this, 'admin_page'), 
-            'dashicons-admin-generic'
+            array($this, 'admin_page')
         );
     }
 
@@ -40,23 +39,7 @@ class Elvanto_Swiper_Admin {
      * Register plugin settings
      */
     public function register_settings() {
-        register_setting('elvanto_swiper_settings_group', 'elvanto_swiper_api_key');
         register_setting('elvanto_swiper_settings_group', 'elvanto_swiper_service_links');
-        
-        add_settings_section(
-            'elvanto_swiper_main_section', 
-            'Main Settings', 
-            array($this, 'main_section_callback'), 
-            'elvanto-swiper'
-        );
-        
-        add_settings_field(
-            'elvanto_swiper_api_key', 
-            'Elvanto API Key', 
-            array($this, 'api_key_callback'), 
-            'elvanto-swiper', 
-            'elvanto_swiper_main_section'
-        );
         
         add_settings_section(
             'elvanto_swiper_service_links_section', 
@@ -72,21 +55,6 @@ class Elvanto_Swiper_Admin {
             'elvanto-swiper', 
             'elvanto_swiper_service_links_section'
         );
-    }
-
-    /**
-     * Main settings section callback
-     */
-    public function main_section_callback() {
-        echo '<p>Enter your Elvanto API key below:</p>';
-    }
-
-    /**
-     * API key field callback
-     */
-    public function api_key_callback() {
-        $api_key = get_option('elvanto_swiper_api_key');
-        echo '<input type="text" name="elvanto_swiper_api_key" value="' . esc_attr($api_key) . '" class="regular-text">';
     }
 
     /**
@@ -111,163 +79,220 @@ class Elvanto_Swiper_Admin {
     }
 
     /**
-     * Check for manual refresh and test button clicks
+     * Check for manual test button clicks
      */
     public function check_for_manual_actions() {
-        if (isset($_POST['elvanto_swiper_refresh_button'])) {
+        // Currently no manual actions for swiper admin
+    }
+
+    /**
+     * Handle manual refresh
+     */
+    public function handle_refresh() {
+        if (!isset($_POST['elvanto_swiper_refresh_nonce'])) {
+            return;
+        }
+
+        if (!wp_verify_nonce($_POST['elvanto_swiper_refresh_nonce'], 'elvanto_swiper_refresh')) {
+            return;
+        }
+
+        if (!current_user_can('manage_options')) {
+            return;
+        }
+
+        if (isset($_POST['elvanto_swiper_refresh'])) {
             $api = new Elvanto_Swiper_API();
             $api->fetch_events();
-            add_action('admin_notices', array($this, 'refresh_success_notice'));
-        }
-        
-        if (isset($_POST['elvanto_swiper_test_button'])) {
-            $this->test_api_connection();
-            add_action('admin_notices', array($this, 'test_success_notice'));
-        }
-    }
-
-    /**
-     * Display success notice after refresh
-     */
-    public function refresh_success_notice() {
-        echo '<div class="notice notice-success is-dismissible">
-                <p>Events successfully refreshed from the API.</p>
-              </div>';
-    }
-
-    /**
-     * Display success notice after test
-     */
-    public function test_success_notice() {
-        echo '<div class="notice notice-success is-dismissible">
-                <p>API connection test completed. Check results below.</p>
-              </div>';
-    }
-
-    /**
-     * Test API connection
-     */
-    public function test_api_connection() {
-        $api_key = get_option('elvanto_swiper_api_key');
-        
-        if (!$api_key) {
-            update_option('elvanto_swiper_test_result', 'No API key configured');
-            return;
-        }
-        
-        $test_results = [];
-        
-        // Test 1: Simple events GET request with correct fields
-        $simple_url = "https://api.elvanto.com/v1/calendar/events/getAll.json?apikey={$api_key}&start=" . date('Y-m-d') . "&end=" . date('Y-m-d', strtotime('+7 days')) . "&fields[0]=register_url&fields[1]=locations";
-        $response = wp_remote_get($simple_url, ['timeout' => 30]);
-        
-        if (is_wp_error($response)) {
-            $test_results['simple_get'] = 'Error: ' . $response->get_error_message();
-        } else {
-            $code = wp_remote_retrieve_response_code($response);
-            $body = wp_remote_retrieve_body($response);
-            $data = json_decode($body, true);
             
-            $test_results['simple_get'] = "HTTP {$code}";
-            if (isset($data['status'])) {
-                $test_results['simple_get'] .= " - API Status: {$data['status']}";
-            }
-            if (isset($data['error'])) {
-                $test_results['simple_get'] .= " - Error: {$data['error']['message']}";
-            }
-        }
-        
-        // Test 2: Services request
-        $services_url = "https://api.elvanto.com/v1/services/getAll.json";
-        $services_response = wp_remote_post($services_url, [
-            'headers' => [
-                'Content-Type' => 'application/json',
-                'Authorization' => 'Basic ' . base64_encode($api_key . ':x')
-            ],
-            'body' => json_encode([
-                'start' => date('Y-m-d'),
-                'end' => date('Y-m-d', strtotime('+7 days'))
-            ]),
-            'timeout' => 30
-        ]);
-        
-        if (is_wp_error($services_response)) {
-            $test_results['services_post'] = 'Error: ' . $services_response->get_error_message();
-        } else {
-            $code = wp_remote_retrieve_response_code($services_response);
-            $body = wp_remote_retrieve_body($services_response);
-            $data = json_decode($body, true);
+            update_option('elvanto_swiper_last_refresh', current_time('mysql'));
+            update_option('elvanto_swiper_last_refresh_status', 'success');
             
-            $test_results['services_post'] = "HTTP {$code}";
-            if (isset($data['status'])) {
-                $test_results['services_post'] .= " - API Status: {$data['status']}";
-            }
-            if (isset($data['error'])) {
-                $test_results['services_post'] .= " - Error: {$data['error']['message']}";
-            }
+            wp_safe_remote_post(
+                add_query_arg('elvanto_swiper_refresh_success', '1', admin_url('admin.php?page=elvanto-swiper'))
+            );
         }
-        
-        update_option('elvanto_swiper_test_result', $test_results);
-    }
-
-    /**
-     * Enqueue admin styles
-     */
-    public function enqueue_admin_styles($hook) {
-        // Only load on our admin page
-        if ($hook !== 'toplevel_page_elvanto-swiper') {
-            return;
-        }
-        
-        // Add inline CSS for admin page
-        $custom_css = "
-            .source-indicator {
-                padding: 2px 6px;
-                border-radius: 3px;
-                font-size: 11px;
-                font-weight: bold;
-                text-transform: uppercase;
-            }
-            .source-service {
-                background-color: #007cba;
-                color: white;
-            }
-            .source-event {
-                background-color: #00a32a;
-                color: white;
-            }
-            .source-unknown {
-                background-color: #ddd;
-                color: #666;
-            }
-        ";
-        wp_add_inline_style('wp-admin', $custom_css);
     }
 
     /**
      * Admin page content
      */
     public function admin_page() {
-        // Get current events for stats
-        $events = get_option('elvanto_swiper_events', []);
-        $event_count = count($events);
-        $service_count = 0;
-        $regular_event_count = 0;
-        
-        foreach ($events as $event) {
-            if (isset($event['source']) && $event['source'] === 'service') {
-                $service_count++;
-            } else {
-                $regular_event_count++;
-            }
-        }
-        
-        // Get debug info from latest response
-        $latest_response = get_option('elvanto_swiper_latest_response', '{}');
-        $response_data = json_decode($latest_response, true);
-        $debug_info = isset($response_data['debug']) ? $response_data['debug'] : [];
-        
-        // Include the admin page template
-        include ELVANTO_SWIPER_PATH . 'includes/templates/admin-page.php';
+        $last_refresh = get_option('elvanto_swiper_last_refresh');
+        $last_refresh_status = get_option('elvanto_swiper_last_refresh_status');
+        $raw_events = get_option('elvanto_swiper_raw_events', array());
+        $raw_services = get_option('elvanto_swiper_raw_services', array());
+        $events_count = is_array($raw_events) ? count($raw_events) : 0;
+        $services_count = is_array($raw_services) ? count($raw_services) : 0;
+        $merged_events = get_option('elvanto_swiper_events', array());
+        $merged_count = is_array($merged_events) ? count($merged_events) : 0;
+        ?>
+        <div class="wrap">
+            <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
+            <p>Configure how the Elvanto event swiper displays events. The API key is managed in the <a href="<?php echo esc_url(admin_url('admin.php?page=kcg-elvanto-api')); ?>">Elvanto API settings</a>.</p>
+            
+            <?php if (isset($_GET['elvanto_swiper_refresh_success'])): ?>
+                <div class="notice notice-success is-dismissible">
+                    <p><?php esc_html_e('Swiper data refreshed successfully!', 'kcg-elvanto-swiper'); ?></p>
+                </div>
+            <?php endif; ?>
+
+            <div class="postbox" style="max-width: 600px;">
+                <h2 class="hndle"><span><?php esc_html_e('Refresh Data', 'kcg-elvanto-swiper'); ?></span></h2>
+                <div class="inside">
+                    <p><?php esc_html_e('Click the button below to manually refresh the swiper events from Elvanto:', 'kcg-elvanto-swiper'); ?></p>
+                    
+                    <form method="post" action="">
+                        <?php wp_nonce_field('elvanto_swiper_refresh', 'elvanto_swiper_refresh_nonce'); ?>
+                        <p>
+                            <button type="submit" name="elvanto_swiper_refresh" class="button button-primary">
+                                <?php esc_html_e('Refresh Now', 'kcg-elvanto-swiper'); ?>
+                            </button>
+                        </p>
+                    </form>
+                    
+                    <hr>
+                    
+                    <h3><?php esc_html_e('Connection Status', 'kcg-elvanto-swiper'); ?></h3>
+                    
+                    <?php if ($last_refresh): ?>
+                        <div style="background-color: #f5f5f5; padding: 12px; border-left: 4px solid #28a745; margin-bottom: 12px;">
+                            <p style="margin: 0;">
+                                <strong><?php esc_html_e('Last Refresh:', 'kcg-elvanto-swiper'); ?></strong>
+                                <code><?php echo esc_html($last_refresh); ?></code>
+                            </p>
+                            <p style="margin: 8px 0 0 0; color: #666;">
+                                <strong><?php esc_html_e('Status:', 'kcg-elvanto-swiper'); ?></strong>
+                                <span style="background-color: <?php echo $last_refresh_status === 'success' ? '#28a745' : '#dc3545'; ?>; color: white; padding: 2px 8px; border-radius: 3px; display: inline-block;">
+                                    <?php echo esc_html($last_refresh_status ?: 'unknown'); ?>
+                                </span>
+                            </p>
+                            <p style="margin: 8px 0 0 0; color: #666;">
+                                <strong><?php esc_html_e('Data Loaded:', 'kcg-elvanto-swiper'); ?></strong>
+                                <?php printf(
+                                    esc_html__('%d events, %d services, %d merged', 'kcg-elvanto-swiper'),
+                                    $events_count,
+                                    $services_count,
+                                    $merged_count
+                                ); ?>
+                            </p>
+                        </div>
+                    <?php else: ?>
+                        <p style="color: #999;"><em><?php esc_html_e('No refresh yet. Click "Refresh Now" to fetch data.', 'kcg-elvanto-swiper'); ?></em></p>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <div class="postbox" style="max-width: 900px; margin-top: 20px;">
+                <h2 class="hndle"><span><?php esc_html_e('Plugin Settings', 'kcg-elvanto-swiper'); ?></span></h2>
+                <div class="inside">
+                    <form method="post" action="options.php">
+                        <?php
+                        settings_fields('elvanto_swiper_settings_group');
+                        do_settings_sections('elvanto-swiper');
+                        submit_button();
+                        ?>
+                    </form>
+                </div>
+            </div>
+
+            <?php if (!empty($merged_events)): ?>
+            <div class="postbox" style="max-width: 1600px; margin-top: 20px;">
+                <h2 class="hndle"><span><?php esc_html_e('Merged Events', 'kcg-elvanto-swiper'); ?> (<?php echo esc_html($merged_count); ?>)</span></h2>
+                <div class="inside">
+                    <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; min-width: 1400px;">
+                        <thead>
+                            <tr style="background-color: #f5f5f5; border-bottom: 2px solid #ddd;">
+                                <th style="padding: 8px; text-align: left; border-right: 1px solid #ddd; min-width: 60px;"><strong>ID</strong></th>
+                                <th style="padding: 8px; text-align: left; border-right: 1px solid #ddd; min-width: 120px;"><strong>Title</strong></th>
+                                <th style="padding: 8px; text-align: left; border-right: 1px solid #ddd; min-width: 80px;"><strong>Source</strong></th>
+                                <th style="padding: 8px; text-align: left; border-right: 1px solid #ddd; min-width: 100px;"><strong>Date</strong></th>
+                                <th style="padding: 8px; text-align: left; border-right: 1px solid #ddd; min-width: 80px;"><strong>Time</strong></th>
+                                <th style="padding: 8px; text-align: left; border-right: 1px solid #ddd; min-width: 60px;"><strong>All Day</strong></th>
+                                <th style="padding: 8px; text-align: left; border-right: 1px solid #ddd; min-width: 100px;"><strong>Subtitle</strong></th>
+                                <th style="padding: 8px; text-align: left; border-right: 1px solid #ddd; min-width: 120px;"><strong>Location</strong></th>
+                                <th style="padding: 8px; text-align: left; border-right: 1px solid #ddd; min-width: 150px;"><strong>Description</strong></th>
+                                <th style="padding: 8px; text-align: left; border-right: 1px solid #ddd; min-width: 80px;"><strong>Color</strong></th>
+                                <th style="padding: 8px; text-align: left; border-right: 1px solid #ddd; min-width: 60px;"><strong>Image</strong></th>
+                                <th style="padding: 8px; text-align: left; border-right: 1px solid #ddd; min-width: 100px;"><strong>More Info</strong></th>
+                                <th style="padding: 8px; text-align: left; min-width: 100px;"><strong>Register</strong></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($merged_events as $event): 
+                            ?>
+                                <tr style="border-bottom: 1px solid #eee;">
+                                    <td style="padding: 8px; border-right: 1px solid #eee;"><code><?php echo esc_html($event['id'] ?? ''); ?></code></td>
+                                    <td style="padding: 8px; border-right: 1px solid #eee;"><strong><?php echo esc_html($event['title'] ?? $event['name'] ?? ''); ?></strong></td>
+                                    <td style="padding: 8px; border-right: 1px solid #eee;">
+                                        <?php 
+                                        $source = $event['source'] ?? 'unknown';
+                                        $source_colors = ['service' => '#d4edda', 'event' => '#cfe2ff', 'unknown' => '#fff3cd'];
+                                        $source_text_colors = ['service' => '#155724', 'event' => '#084298', 'unknown' => '#856404'];
+                                        ?>
+                                        <span style="background-color: <?php echo esc_attr($source_colors[$source] ?? '#f8f9fa'); ?>; color: <?php echo esc_attr($source_text_colors[$source] ?? '#000'); ?>; padding: 2px 6px; border-radius: 3px; font-size: 12px;"><?php echo esc_html(ucfirst($source)); ?></span>
+                                    </td>
+                                    <td style="padding: 8px; border-right: 1px solid #eee;"><code><?php echo esc_html($event['date'] ?? $event['start_date'] ?? '—'); ?></code></td>
+                                    <td style="padding: 8px; border-right: 1px solid #eee;">
+                                        <?php
+                                        if (!empty($event['time'])) {
+                                            echo esc_html($event['time']);
+                                        } elseif (!empty($event['start_date']) && strpos($event['start_date'], ':') !== false) {
+                                            $datetime = new DateTime($event['start_date']);
+                                            echo esc_html($datetime->format('H:i:s'));
+                                        } else {
+                                            echo '—';
+                                        }
+                                        ?>
+                                    </td>
+                                    <td style="padding: 8px; border-right: 1px solid #eee; text-align: center;">
+                                        <?php echo (!empty($event['all_day']) ? '✅' : '❌'); ?>
+                                    </td>
+                                    <td style="padding: 8px; border-right: 1px solid #eee;"><?php echo esc_html($event['subtitle'] ?? '—'); ?></td>
+                                    <td style="padding: 8px; border-right: 1px solid #eee;"><?php echo esc_html($event['location'] ?? '—'); ?></td>
+                                    <td style="padding: 8px; border-right: 1px solid #eee; font-size: 12px;">
+                                        <?php 
+                                        if (!empty($event['description'])) {
+                                            $desc = substr($event['description'], 0, 50);
+                                            if (strlen($event['description']) > 50) $desc .= '...';
+                                            echo esc_html($desc);
+                                        } else {
+                                            echo '—';
+                                        }
+                                        ?>
+                                    </td>
+                                    <td style="padding: 8px; border-right: 1px solid #eee;">
+                                        <?php 
+                                        $color = $event['color'] ?? '#007cba';
+                                        ?>
+                                        <span style="display: inline-block; width: 16px; height: 16px; background-color: <?php echo esc_attr($color); ?>; border-radius: 3px; vertical-align: middle; margin-right: 5px; border: 1px solid #ddd;"></span>
+                                        <code style="font-size: 11px;"><?php echo esc_html($color); ?></code>
+                                    </td>
+                                    <td style="padding: 8px; border-right: 1px solid #eee; text-align: center;">
+                                        <?php echo (!empty($event['picture']) ? '✅' : '❌'); ?>
+                                    </td>
+                                    <td style="padding: 8px; border-right: 1px solid #eee;">
+                                        <?php
+                                        $has_link_info = !empty($event['link_info']) && filter_var($event['link_info'], FILTER_VALIDATE_URL);
+                                        echo ($has_link_info ? '✅' : '❌');
+                                        ?>
+                                    </td>
+                                    <td style="padding: 8px;">
+                                        <?php
+                                        $has_link_register = !empty($event['link_register']) && filter_var($event['link_register'], FILTER_VALIDATE_URL);
+                                        echo ($has_link_register ? '✅' : '❌');
+                                        ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
+        </div>
+        <?php
     }
 }
