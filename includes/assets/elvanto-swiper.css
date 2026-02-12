@@ -1,12 +1,11 @@
 .swiper-container {
     overflow: hidden;
+    mask-image: linear-gradient(to right, transparent 0%, black 5%, black 80%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 5%, black 80%, transparent 100%);
 }
 
-/* Make swiper slides equal height */
 .swiper-wrapper {
-    padding: 1rem;
-    padding-right: 0;
-    margin-left: -1rem;
+    padding: 1rem 0 1rem 5%;
     align-items: stretch;
 }
 
@@ -15,7 +14,6 @@
     align-items: center;
     justify-content: center;
     width: calc(var(--wp--preset--font-size--medium)*16);
-    /* min-height: 100%; */
     overflow: visible;
 }
 
@@ -69,10 +67,6 @@
     padding: 0;
 }
 
-.event-details {
-    /* margin-bottom: 0.5rem; */
-}
-
 .event-description {
     font-size: calc(var(--wp--preset--font-size--medium)*0.9);
     flex-grow: 1;
@@ -83,4 +77,9 @@
     width: 100%;
     margin-top: auto;
     gap: 0.5rem;
+}
+
+.wp-block-button__link {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
 }

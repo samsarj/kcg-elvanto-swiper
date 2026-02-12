@@ -13,8 +13,7 @@ document.addEventListener("DOMContentLoaded", function () {
     },
     // Use slide effect instead of cards for better button interaction
     effect: "slide",
-    // Center the active slide
-    centeredSlides: true,
+    centeredSlides: false,
   });
 
   // Equalize card heights
