@@ -2,7 +2,7 @@
 /**
  * Plugin Name: KCG Elvanto Event Swiper
  * Description: A plugin to display events from Elvanto using a Swiper carousel.
- * Version: 2.4.0
+ * Version: 2.5.0
  * Author: Sam Sarjudeen
  * Author URI: https://github.com/samsarj
  * Plugin URI: https://github.com/samsarj/kcg-elvanto-swiper
@@ -18,7 +18,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('ELVANTO_SWIPER_VERSION', '2.4.0');
+define('ELVANTO_SWIPER_VERSION', '2.5.0');
 define('ELVANTO_SWIPER_PATH', plugin_dir_path(__FILE__));
 define('ELVANTO_SWIPER_URL', plugin_dir_url(__FILE__));
 
@@ -41,6 +41,9 @@ class Elvanto_Swiper {
         // Plugin activation/deactivation hooks - use action hooks instead
         add_action('activate_' . plugin_basename(__FILE__), array($this, 'activate'));
         add_action('deactivate_' . plugin_basename(__FILE__), array($this, 'deactivate'));
+        
+        // Register the cron hook to fetch events
+        add_action('elvanto_swiper_fetch_events_hook', array($this, 'run_fetch_events_cron'));
     }
     
     /**
@@ -70,17 +73,46 @@ class Elvanto_Swiper {
     }
     
     /**
+     * Run the cron job to fetch events
+     */
+    public function run_fetch_events_cron() {
+        // Check if API provider is available
+        if (!class_exists('KCG_Elvanto_API_Registry')) {
+            error_log('Elvanto Swiper: KCG_Elvanto_API_Registry not available for cron execution');
+            return;
+        }
+        
+        // Load the API class and fetch events
+        require_once plugin_dir_path(__FILE__) . 'includes/class-elvanto-swiper-api.php';
+        $api = new Elvanto_Swiper_API();
+        $api->fetch_events();
+        
+        // Update the last refresh timestamp and status
+        update_option('elvanto_swiper_last_refresh', current_time('mysql'));
+        update_option('elvanto_swiper_last_refresh_status', 'success');
+        
+        error_log('Elvanto Swiper: Cron job executed - events refreshed');
+    }
+    
+    /**
      * Plugin activation
      */
     public function activate() {
-        // API provider handles cron scheduling
+        // Schedule hourly cron job for fetching events
+        if (!wp_next_scheduled('elvanto_swiper_fetch_events_hook')) {
+            wp_schedule_event(time(), 'hourly', 'elvanto_swiper_fetch_events_hook');
+        }
     }
     
     /**
      * Plugin deactivation
      */
     public function deactivate() {
-        // API provider handles cron cleanup
+        // Clean up cron job
+        $timestamp = wp_next_scheduled('elvanto_swiper_fetch_events_hook');
+        if ($timestamp) {
+            wp_unschedule_event($timestamp, 'elvanto_swiper_fetch_events_hook');
+        }
     }
 }
 
