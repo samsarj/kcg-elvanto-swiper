@@ -17,43 +17,52 @@ class Elvanto_Swiper_API {
      */
     public function fetch_events() {
         error_log('Starting dual-endpoint fetch process');
-        
-        // Get API key from the provider
-        if (!class_exists('KCG_Elvanto_API_Registry')) {
-            error_log('KCG_Elvanto_API_Registry not available');
+
+        if (!class_exists('KCG_Elvanto_API_Client')) {
+            error_log('KCG_Elvanto_API_Client not available');
             return;
         }
-        
-        $api_key = KCG_Elvanto_API_Registry::get_api_key();
-        if (!$api_key) {
-            error_log('No API key configured');
-            return;
-        }
-        
+
         $start_date = date('Y-m-d');
         $end_date = date('Y-m-d', strtotime('+1 month'));
-        
-        // Initialize debug info
-        $debug_info = [
+
+        $debug_info = array(
             'timestamp' => current_time('mysql'),
-            'endpoints' => []
-        ];
-        
-        // Fetch events from calendar/events/getAll
-        $events_data = $this->fetch_events_endpoint($api_key, $start_date, $end_date, $debug_info);
-        
-        // Fetch services from services/getAll
-        $services_data = $this->fetch_services_endpoint($api_key, $start_date, $end_date, $debug_info);
-        
-        // Merge the data intelligently
+            'endpoints' => array(),
+        );
+
+        $events_data = KCG_Elvanto_API_Client::fetch_events(
+            $start_date,
+            $end_date,
+            array('register_url', 'locations'),
+            $debug_info
+        );
+
+        if (is_wp_error($events_data)) {
+            $debug_info['endpoints']['events']['error'] = $events_data->get_error_message();
+            $events_data = [];
+        }
+
+        $services_data = KCG_Elvanto_API_Client::fetch_services(
+            $start_date,
+            $end_date,
+            array('series_name', 'picture'),
+            $debug_info
+        );
+
+        if (is_wp_error($services_data)) {
+            $debug_info['endpoints']['services']['error'] = $services_data->get_error_message();
+            $services_data = [];
+        }
+
         $merged_events = $this->merge_events_and_services($events_data, $services_data, $debug_info);
         
-        // Store the merged events
-        update_option('elvanto_swiper_events', $merged_events);
+        // Store the merged events in transients to reduce option storage
+        set_transient('elvanto_swiper_events', $merged_events, 6 * HOUR_IN_SECONDS);
         
         // Store raw data for debugging - store only the actual arrays, not the pagination wrapper
-        update_option('elvanto_swiper_raw_events', $events_data);
-        update_option('elvanto_swiper_raw_services', $services_data);
+        set_transient('elvanto_swiper_raw_events', $events_data, 6 * HOUR_IN_SECONDS);
+        set_transient('elvanto_swiper_raw_services', $services_data, 6 * HOUR_IN_SECONDS);
         
         // Store the complete API responses for debugging
         update_option('elvanto_swiper_full_events_response', $debug_info['endpoints']['events']['full_response'] ?? []);
@@ -67,165 +76,6 @@ class Elvanto_Swiper_API {
         update_option('elvanto_swiper_latest_response', json_encode($debug_response));
         
         error_log("Stored " . count($merged_events) . " merged events");
-    }
-    
-    /**
-     * Fetch from events endpoint
-     */
-    private function fetch_events_endpoint($api_key, $start_date, $end_date, &$debug_info) {
-        error_log('Fetching from events endpoint');
-        
-        $url = "https://api.elvanto.com/v1/calendar/events/getAll.json";
-        $url .= "?apikey={$api_key}";
-        $url .= "&start={$start_date}";
-        $url .= "&end={$end_date}";
-        $url .= "&fields[0]=register_url";
-        $url .= "&fields[1]=locations";
-        
-        $debug_info['endpoints']['events'] = [
-            'url' => $url,
-            'method' => 'GET'
-        ];
-        
-        $response = wp_remote_get($url, ['timeout' => 30]);
-        
-        if (is_wp_error($response)) {
-            $error_message = $response->get_error_message();
-            error_log("Events endpoint error: {$error_message}");
-            $debug_info['endpoints']['events']['error'] = $error_message;
-            return [];
-        }
-        
-        $response_code = wp_remote_retrieve_response_code($response);
-        $body = wp_remote_retrieve_body($response);
-        $data = json_decode($body, true);
-        
-        $debug_info['endpoints']['events']['response_code'] = $response_code;
-        $debug_info['endpoints']['events']['api_status'] = $data['status'] ?? 'unknown';
-        $debug_info['endpoints']['events']['full_response'] = $data; // Store complete response
-        
-        if (isset($data['error'])) {
-            error_log("Events API error: " . json_encode($data['error']));
-            $debug_info['endpoints']['events']['api_error'] = $data['error'];
-            return [];
-        }
-        
-        // Extract events from the pagination wrapper - data is in events.event
-        $events = [];
-        if (isset($data['events']['event']) && is_array($data['events']['event'])) {
-            $events = $data['events']['event'];
-        } elseif (isset($data['events']) && is_array($data['events']) && !isset($data['events']['event'])) {
-            // Fallback for different response format
-            $events = $data['events'];
-        }
-        
-        $debug_info['endpoints']['events']['events_count'] = count($events);
-        $debug_info['endpoints']['events']['full_response_keys'] = array_keys($data);
-        $debug_info['endpoints']['events']['events_wrapper_keys'] = isset($data['events']) ? array_keys($data['events']) : [];
-        
-        // Log a sample event for debugging
-        if (!empty($events) && is_array($events)) {
-            $debug_info['endpoints']['events']['sample_event'] = $events[0];
-        }
-        
-        // Log pagination info if available
-        if (isset($data['events'])) {
-            $pagination_data = $data['events'];
-            $debug_info['endpoints']['events']['pagination'] = [
-                'total' => $pagination_data['total'] ?? 0,
-                'page' => $pagination_data['page'] ?? 1,
-                'per_page' => $pagination_data['per_page'] ?? 0,
-                'on_this_page' => $pagination_data['on_this_page'] ?? 0
-            ];
-        }
-        
-        error_log("Fetched " . count($events) . " events from events endpoint. Top-level keys: " . implode(', ', array_keys($data)) . 
-                  ". Events wrapper keys: " . (isset($data['events']) ? implode(', ', array_keys($data['events'])) : 'none'));
-        return $events;
-    }
-    
-    /**
-     * Fetch from services endpoint
-     */
-    private function fetch_services_endpoint($api_key, $start_date, $end_date, &$debug_info) {
-        error_log('Fetching from services endpoint');
-        
-        $url = "https://api.elvanto.com/v1/services/getAll.json";
-        
-        $debug_info['endpoints']['services'] = [
-            'url' => $url,
-            'method' => 'POST'
-        ];
-        
-        $response = wp_remote_post($url, [
-            'headers' => [
-                'Content-Type' => 'application/json',
-                'Authorization' => 'Basic ' . base64_encode($api_key . ':x')
-            ],
-            'body' => json_encode([
-                'start' => $start_date,
-                'end' => $end_date,
-                'fields' => [
-                    'series_name',
-                    'picture'
-                ]
-            ]),
-            'timeout' => 30
-        ]);
-        
-        if (is_wp_error($response)) {
-            $error_message = $response->get_error_message();
-            error_log("Services endpoint error: {$error_message}");
-            $debug_info['endpoints']['services']['error'] = $error_message;
-            return [];
-        }
-        
-        $response_code = wp_remote_retrieve_response_code($response);
-        $body = wp_remote_retrieve_body($response);
-        $data = json_decode($body, true);
-        
-        $debug_info['endpoints']['services']['response_code'] = $response_code;
-        $debug_info['endpoints']['services']['api_status'] = $data['status'] ?? 'unknown';
-        $debug_info['endpoints']['services']['full_response'] = $data; // Store complete response
-        
-        if (isset($data['error'])) {
-            error_log("Services API error: " . json_encode($data['error']));
-            $debug_info['endpoints']['services']['api_error'] = $data['error'];
-            return [];
-        }
-        
-        // Extract services from the pagination wrapper - data is in services.service
-        $services = [];
-        if (isset($data['services']['service']) && is_array($data['services']['service'])) {
-            $services = $data['services']['service'];
-        } elseif (isset($data['services']) && is_array($data['services']) && !isset($data['services']['service'])) {
-            // Fallback for different response format
-            $services = $data['services'];
-        }
-        
-        $debug_info['endpoints']['services']['services_count'] = count($services);
-        $debug_info['endpoints']['services']['full_response_keys'] = array_keys($data);
-        $debug_info['endpoints']['services']['services_wrapper_keys'] = isset($data['services']) ? array_keys($data['services']) : [];
-        
-        // Log a sample service for debugging
-        if (!empty($services) && is_array($services)) {
-            $debug_info['endpoints']['services']['sample_service'] = $services[0];
-        }
-        
-        // Log pagination info if available
-        if (isset($data['services'])) {
-            $pagination_data = $data['services'];
-            $debug_info['endpoints']['services']['pagination'] = [
-                'total' => $pagination_data['total'] ?? 0,
-                'page' => $pagination_data['page'] ?? 1,
-                'per_page' => $pagination_data['per_page'] ?? 0,
-                'on_this_page' => $pagination_data['on_this_page'] ?? 0
-            ];
-        }
-        
-        error_log("Fetched " . count($services) . " services from services endpoint. Top-level keys: " . implode(', ', array_keys($data)) . 
-                  ". Services wrapper keys: " . (isset($data['services']) ? implode(', ', array_keys($data['services'])) : 'none'));
-        return $services;
     }
     
     /**
@@ -507,6 +357,6 @@ class Elvanto_Swiper_API {
      * Get events for display
      */
     public function get_events() {
-        return get_option('elvanto_swiper_events', []);
+        return get_transient('elvanto_swiper_events') ?: [];
     }
 }
