@@ -16,7 +16,7 @@ class Elvanto_Swiper_Admin {
      * Initialize admin functionality
      */
     public function __construct() {
-        add_action('admin_menu', array($this, 'add_admin_page'));
+        add_action('admin_menu', array($this, 'add_admin_page'), 20);
         add_action('admin_init', array($this, 'register_settings'));
         add_action('admin_init', array($this, 'check_for_manual_actions'));
         add_action('admin_init', array($this, 'handle_refresh'));
@@ -26,11 +26,12 @@ class Elvanto_Swiper_Admin {
      * Add admin menu page
      */
     public function add_admin_page() {
-        add_options_page(
-            'Elvanto Swiper Settings', 
-            'Elvanto Swiper', 
-            'manage_options', 
-            'elvanto-swiper', 
+        add_submenu_page(
+            'kcg-elvanto-api',
+            'Elvanto Swiper Settings',
+            'Event Swiper',
+            'manage_options',
+            'elvanto-swiper',
             array($this, 'admin_page')
         );
     }
@@ -120,11 +121,11 @@ class Elvanto_Swiper_Admin {
     public function admin_page() {
         $last_refresh = get_option('elvanto_swiper_last_refresh');
         $last_refresh_status = get_option('elvanto_swiper_last_refresh_status');
-        $raw_events = get_option('elvanto_swiper_raw_events', array());
-        $raw_services = get_option('elvanto_swiper_raw_services', array());
+        $raw_events = get_transient('elvanto_swiper_raw_events') ?: array();
+        $raw_services = get_transient('elvanto_swiper_raw_services') ?: array();
         $events_count = is_array($raw_events) ? count($raw_events) : 0;
         $services_count = is_array($raw_services) ? count($raw_services) : 0;
-        $merged_events = get_option('elvanto_swiper_events', array());
+        $merged_events = get_transient('elvanto_swiper_events') ?: array();
         $merged_count = is_array($merged_events) ? count($merged_events) : 0;
         ?>
         <div class="wrap">
