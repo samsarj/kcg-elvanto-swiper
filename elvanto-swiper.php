@@ -37,13 +37,17 @@ class Elvanto_Swiper {
     public function __construct() {
         // Wait for the API provider to be loaded
         add_action('plugins_loaded', array($this, 'init_display'));
-        
-        // Plugin activation/deactivation hooks - use action hooks instead
-        add_action('activate_' . plugin_basename(__FILE__), array($this, 'activate'));
-        add_action('deactivate_' . plugin_basename(__FILE__), array($this, 'deactivate'));
-        
+
         // Register the cron hook to fetch events
         add_action('elvanto_swiper_fetch_events_hook', array($this, 'run_fetch_events_cron'));
+    }
+
+    /**
+     * Register activation and deactivation hooks.
+     */
+    public static function bootstrap() {
+        register_activation_hook(__FILE__, array('Elvanto_Swiper', 'activate'));
+        register_deactivation_hook(__FILE__, array('Elvanto_Swiper', 'deactivate'));
     }
     
     /**
@@ -97,8 +101,12 @@ class Elvanto_Swiper {
     /**
      * Plugin activation
      */
-    public function activate() {
-        // Schedule hourly cron job for fetching events
+    public static function activate() {
+        if (!class_exists('KCG_Elvanto_API_Registry')) {
+            deactivate_plugins(plugin_basename(__FILE__));
+            wp_die('KCG Elvanto Swiper requires the KCG Elvanto API Provider plugin to be installed and active.');
+        }
+
         if (!wp_next_scheduled('elvanto_swiper_fetch_events_hook')) {
             wp_schedule_event(time(), 'hourly', 'elvanto_swiper_fetch_events_hook');
         }
@@ -107,8 +115,7 @@ class Elvanto_Swiper {
     /**
      * Plugin deactivation
      */
-    public function deactivate() {
-        // Clean up cron job
+    public static function deactivate() {
         $timestamp = wp_next_scheduled('elvanto_swiper_fetch_events_hook');
         if ($timestamp) {
             wp_unschedule_event($timestamp, 'elvanto_swiper_fetch_events_hook');
@@ -116,5 +123,6 @@ class Elvanto_Swiper {
     }
 }
 
-// Initialize the plugin
+// Register activation/deactivation handlers and initialize the plugin
+Elvanto_Swiper::bootstrap();
 new Elvanto_Swiper();
