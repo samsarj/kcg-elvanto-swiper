@@ -104,10 +104,10 @@ class Elvanto_Swiper_Admin {
 
         if (isset($_POST['elvanto_swiper_refresh'])) {
             $api = new Elvanto_Swiper_API();
-            $api->fetch_events();
+            $success = $api->fetch_events();
             
             update_option('elvanto_swiper_last_refresh', current_time('mysql'));
-            update_option('elvanto_swiper_last_refresh_status', 'success');
+            update_option('elvanto_swiper_last_refresh_status', $success ? 'success' : 'failed');
             
             wp_safe_remote_post(
                 add_query_arg('elvanto_swiper_refresh_success', '1', admin_url('admin.php?page=elvanto-swiper'))
@@ -121,11 +121,11 @@ class Elvanto_Swiper_Admin {
     public function admin_page() {
         $last_refresh = get_option('elvanto_swiper_last_refresh');
         $last_refresh_status = get_option('elvanto_swiper_last_refresh_status');
-        $raw_events = get_transient('elvanto_swiper_raw_events') ?: array();
-        $raw_services = get_transient('elvanto_swiper_raw_services') ?: array();
+        $raw_events = get_transient('elvanto_swiper_raw_events') ?: get_option('elvanto_swiper_raw_events', array());
+        $raw_services = get_transient('elvanto_swiper_raw_services') ?: get_option('elvanto_swiper_raw_services', array());
         $events_count = is_array($raw_events) ? count($raw_events) : 0;
         $services_count = is_array($raw_services) ? count($raw_services) : 0;
-        $merged_events = get_transient('elvanto_swiper_events') ?: array();
+        $merged_events = get_transient('elvanto_swiper_events') ?: get_option('elvanto_swiper_events', array());
         $merged_count = is_array($merged_events) ? count($merged_events) : 0;
         ?>
         <div class="wrap">

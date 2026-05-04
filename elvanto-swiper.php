@@ -2,7 +2,7 @@
 /**
  * Plugin Name: KCG Elvanto Event Swiper
  * Description: A plugin to display events from Elvanto using a Swiper carousel.
- * Version: 2.6.0
+ * Version: 2.6.1
  * Author: Sam Sarjudeen
  * Author URI: https://github.com/samsarj
  * Plugin URI: https://github.com/samsarj/kcg-elvanto-swiper
@@ -89,13 +89,17 @@ class Elvanto_Swiper {
         // Load the API class and fetch events
         require_once plugin_dir_path(__FILE__) . 'includes/class-elvanto-swiper-api.php';
         $api = new Elvanto_Swiper_API();
-        $api->fetch_events();
+        $success = $api->fetch_events();
         
         // Update the last refresh timestamp and status
         update_option('elvanto_swiper_last_refresh', current_time('mysql'));
-        update_option('elvanto_swiper_last_refresh_status', 'success');
+        update_option('elvanto_swiper_last_refresh_status', $success ? 'success' : 'failed');
         
-        error_log('Elvanto Swiper: Cron job executed - events refreshed');
+        if ($success) {
+            error_log('Elvanto Swiper: Cron job executed - events refreshed');
+        } else {
+            error_log('Elvanto Swiper: Cron job executed - fetch failed, previous cache preserved');
+        }
     }
     
     /**

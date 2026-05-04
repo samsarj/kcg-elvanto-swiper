@@ -31,6 +31,8 @@ class Elvanto_Swiper_API {
             'endpoints' => array(),
         );
 
+        $has_api_error = false;
+
         $events_data = KCG_Elvanto_API_Client::fetch_events(
             $start_date,
             $end_date,
@@ -40,6 +42,7 @@ class Elvanto_Swiper_API {
 
         if (is_wp_error($events_data)) {
             $debug_info['endpoints']['events']['error'] = $events_data->get_error_message();
+            $has_api_error = true;
             $events_data = [];
         }
 
@@ -52,18 +55,24 @@ class Elvanto_Swiper_API {
 
         if (is_wp_error($services_data)) {
             $debug_info['endpoints']['services']['error'] = $services_data->get_error_message();
+            $has_api_error = true;
             $services_data = [];
         }
 
         $merged_events = $this->merge_events_and_services($events_data, $services_data, $debug_info);
-        
-        // Store the merged events in transients to reduce option storage
-        set_transient('elvanto_swiper_events', $merged_events, 6 * HOUR_IN_SECONDS);
-        
-        // Store raw data for debugging - store only the actual arrays, not the pagination wrapper
-        set_transient('elvanto_swiper_raw_events', $events_data, 6 * HOUR_IN_SECONDS);
-        set_transient('elvanto_swiper_raw_services', $services_data, 6 * HOUR_IN_SECONDS);
-        
+
+        if (!$has_api_error) {
+            update_option('elvanto_swiper_events', $merged_events);
+            set_transient('elvanto_swiper_events', $merged_events, 6 * HOUR_IN_SECONDS);
+            update_option('elvanto_swiper_raw_events', $events_data);
+            update_option('elvanto_swiper_raw_services', $services_data);
+            set_transient('elvanto_swiper_raw_events', $events_data, 6 * HOUR_IN_SECONDS);
+            set_transient('elvanto_swiper_raw_services', $services_data, 6 * HOUR_IN_SECONDS);
+        } else {
+            error_log('Elvanto Swiper: API error detected, preserving existing cached data.');
+            $merged_events = get_option('elvanto_swiper_events', get_transient('elvanto_swiper_events') ?: []);
+        }
+
         // Store the complete API responses for debugging
         update_option('elvanto_swiper_full_events_response', $debug_info['endpoints']['events']['full_response'] ?? []);
         update_option('elvanto_swiper_full_services_response', $debug_info['endpoints']['services']['full_response'] ?? []);
@@ -76,6 +85,8 @@ class Elvanto_Swiper_API {
         update_option('elvanto_swiper_latest_response', json_encode($debug_response));
         
         error_log("Stored " . count($merged_events) . " merged events");
+
+        return !$has_api_error;
     }
     
     /**
@@ -357,6 +368,6 @@ class Elvanto_Swiper_API {
      * Get events for display
      */
     public function get_events() {
-        return get_transient('elvanto_swiper_events') ?: [];
+        return get_transient('elvanto_swiper_events') ?: get_option('elvanto_swiper_events', []);
     }
 }
